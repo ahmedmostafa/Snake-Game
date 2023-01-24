@@ -2,6 +2,7 @@
 #include <iostream>
 #include "SDL.h"
 
+
 Game::Game(std::size_t grid_width, std::size_t grid_height)
     : snake(grid_width, grid_height),
       engine(dev()),
@@ -25,7 +26,7 @@ void Game::Run(Controller const &controller, Renderer &renderer,
     // Input, Update, Render - the main game loop.
     controller.HandleInput(running, snake);
     Update();
-    renderer.Render(snake, food);
+    renderer.Render(snake, snakeFood);
 
     frame_end = SDL_GetTicks();
 
@@ -50,6 +51,32 @@ void Game::Run(Controller const &controller, Renderer &renderer,
   }
 }
 
+enum Food { snack, poison, booster };
+
+int poisonTimerStart = 0;
+int poisonTimerEnd = 0;
+void Game::setFood(int& x, int& y)
+{
+      
+  std::random_device ldev;   
+  std::mt19937 rand_no(ldev());   
+  std::uniform_int_distribution<int> tempFood(0,2); 
+  bool tmpRet = false;
+  auto random_FeedIndex = tempFood(rand_no);
+
+  switch((Food)random_FeedIndex){
+    case booster:
+       snakeFood = SnakeBooster(x,y);
+      break;
+    case poison:
+      snakeFood = SnakePoison(x,y);
+      poisonTimerStart = SDL_GetTicks(); // keep the posion for 3 seconds
+      break;
+    case snack:
+      snakeFood = SnakeSnacks(x,y);
+  }
+}
+
 void Game::PlaceFood() {
   int x, y;
   while (true) {
@@ -58,8 +85,7 @@ void Game::PlaceFood() {
     // Check that the location is not occupied by a snake item before placing
     // food.
     if (!snake.SnakeCell(x, y)) {
-      food.x = x;
-      food.y = y;
+      setFood(x,y);
       return;
     }
   }
@@ -73,13 +99,31 @@ void Game::Update() {
   int new_x = static_cast<int>(snake.head_x);
   int new_y = static_cast<int>(snake.head_y);
 
-  // Check if there's food over here
-  if (food.x == new_x && food.y == new_y) {
-    score++;
+
+  if((snakeFood.getVal() == 0)) // current food is posion.
+  {
+    poisonTimerEnd = SDL_GetTicks();
+  }
+   // Check if there's food over here
+  if ((snakeFood.getFoodXPos() == new_x && snakeFood.getFoodYPos() == new_y )) {
+    if(snakeFood.getVal() == 0)
+    {
+      snake.alive = false;
+      return;        
+    }
+
+    score += snakeFood.getVal(); 
     PlaceFood();
     // Grow snake and increase speed.
     snake.GrowBody();
     snake.speed += 0.02;
+  }
+// check if 3 seconds already passed for the posion.
+  else if ((snakeFood.getVal() == 0) && ((poisonTimerEnd - poisonTimerStart) >= 3000))
+  {
+    poisonTimerStart = 0;
+    poisonTimerEnd = 0;
+    PlaceFood();
   }
 }
 
