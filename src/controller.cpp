@@ -3,6 +3,7 @@
 #include "SDL.h"
 #include "snake.h"
 
+
 void Controller::ChangeDirection(Snake &snake, Snake::Direction input,
                                  Snake::Direction opposite) const {
   if (snake.direction != opposite || snake.size == 1) snake.direction = input;
